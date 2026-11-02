@@ -5,7 +5,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const fmtDate = (t) => new Date(t).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
 const fmtShort = (t) => new Date(t).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
 const fmtTime = (t) => new Date(t).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
-const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
+const fmtMD = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()}`; };
+const sameDay =(a, b) => new Date(a).toDateString() === new Date(b).toDateString();
 
 let be;
 let user = null;
@@ -166,7 +167,7 @@ function viewBoard(fresh) {
   let cells = '';
   for (let i = 0; i < b.size; i++) {
     const st = stickers[i];
-    if (st) cells += `<div class="cell filled ${fresh.has(st.id) ? 'pop' : ''}" title="${esc(st.name)} · ${fmtShort(st.at)}">${esc(st.emoji)}</div>`;
+    if (st) cells += `<div class="cell filled ${fresh.has(st.id) ? 'pop' : ''}" title="${esc(st.name)} · ${fmtShort(st.at)}"><span class="cell-emoji">${esc(st.emoji)}</span><span class="cell-date">${fmtMD(st.at)}</span></div>`;
     else cells += `<div class="cell ${i === b.count ? 'next' : ''}">${i + 1}</div>`;
   }
 
