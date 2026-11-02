@@ -1,0 +1,18 @@
+rules_version = '2';
+
+// Firebase 콘솔 > Firestore Database > 규칙 탭에 이 내용을 붙여넣고 "게시"하세요.
+// 아래 이메일 두 개를 실제 가족 구글 계정으로 바꿔 주세요. (소문자로)
+// 실제 이메일은 Firebase 콘솔에만 넣고, 이 파일(GitHub에 올라가는 파일)은 그대로 두는 걸 추천해요.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isFamily() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['parent1@gmail.com', 'parent2@gmail.com'];
+    }
+
+    match /{document=**} {
+      allow read, write: if isFamily();
+    }
+  }
+}
