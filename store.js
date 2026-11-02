@@ -71,10 +71,20 @@ export const ops = {
     tx.update('settings/main', { currentBoard: no });
   },
 
-  async saveSettings(tx, settings, currentReward) {
+  // current: 지금 판의 { reward, size } — 칸 수는 이미 붙인 개수보다 작게 줄일 수 없어요.
+  async saveSettings(tx, settings, current) {
     const s = await tx.get('settings/main');
+    const path = `boards/${s.currentBoard}`;
+    const b = await tx.get(path);
+    if (current.size < b.count) throw new Error(`이미 ${b.count}개를 붙여서 ${current.size}칸으로 줄일 수 없어요.`);
+    const full = b.count >= current.size;
     tx.update('settings/main', settings);
-    if (currentReward != null) tx.update(`boards/${s.currentBoard}`, { reward: currentReward });
+    tx.update(path, {
+      reward: current.reward,
+      size: current.size,
+      completedAt: full ? (b.completedAt || Date.now()) : null,
+    });
+    return { completed: full && !b.completedAt };
   },
 
   async setRewardGiven(tx, no, given) {

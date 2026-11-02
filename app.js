@@ -182,7 +182,7 @@ function viewBoard(fresh) {
     </section>
 
     <section class="board card ${done ? 'done' : ''}">
-      <div class="grid" style="--cols:${b.size % 6 === 0 || b.size > 30 ? 6 : 5}">${cells}</div>
+      <div class="grid" style="--cols:${gridCols(b.size)}">${cells}</div>
     </section>
 
     ${done
@@ -194,6 +194,9 @@ function viewBoard(fresh) {
       <span class="today-list">${today.length ? today.map((x) => `<span title="${esc(x.name)}">${esc(x.emoji)}</span>`).join('') : '<span class="muted">아직 없어요</span>'}</span>
     </section>`;
 }
+
+// 30칸은 6×5, 40칸은 5×8처럼 마지막 줄이 꽉 차는 칸 수를 고름
+const gridCols = (size) => (size % 6 === 0 && size <= 36 ? 6 : size % 5 === 0 ? 5 : 6);
 
 function viewHistory() {
   const b = currentBoard();
@@ -270,12 +273,16 @@ function viewSettings() {
         <label class="field">이번 판(${b.no}번째) 보상
           <input name="currentReward" value="${esc(b.reward)}" maxlength="60">
         </label>
+        <label class="field">이번 판 칸 수
+          <input name="currentSize" type="number" min="${Math.max(5, b.count)}" max="60" value="${b.size}">
+          <span class="muted small">붙인 스티커는 그대로 남아요. 이미 붙인 ${b.count}개보다 적게는 못 줄여요.</span>
+        </label>
         <label class="field">새 판의 기본 보상
           <input name="defaultReward" value="${esc(s.defaultReward)}" maxlength="60">
         </label>
         <label class="field">새 판의 칸 수
           <input name="boardSize" type="number" min="5" max="60" value="${s.boardSize}">
-          <span class="muted small">지금 판은 ${b.size}칸 그대로 유지되고, 다음 판부터 바뀌어요.</span>
+          <span class="muted small">다음 판부터 이 칸 수로 시작해요.</span>
         </label>
       </section>
 
@@ -381,18 +388,20 @@ async function saveSettings(form) {
   const fd = new FormData(form);
   const missions = collectMissions();
   if (!missions.some((m) => !m.hidden)) return toast('보이는 미션이 하나는 있어야 해요.');
-  const size = Math.min(60, Math.max(5, parseInt(fd.get('boardSize'), 10) || 30));
+  const clampSize = (v) => Math.min(60, Math.max(5, parseInt(v, 10) || 30));
   const settings = {
     childName: fd.get('childName').trim() || '우리 아이',
     defaultReward: fd.get('defaultReward').trim(),
-    boardSize: size,
+    boardSize: clampSize(fd.get('boardSize')),
     missions,
   };
-  const ok = await act(() => be.run((tx) => ops.saveSettings(tx, settings, fd.get('currentReward').trim())).then(() => true));
-  if (ok) {
+  const current = { reward: fd.get('currentReward').trim(), size: clampSize(fd.get('currentSize')) };
+  const res = await act(() => be.run((tx) => ops.saveSettings(tx, settings, current)));
+  if (res) {
     settingsDirty = false;
     toast('저장했어요!');
     render();
+    if (res.completed) celebrate();
   }
 }
 
